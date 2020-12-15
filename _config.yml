@@ -4,3 +4,5 @@ show_downloads: false
 show_repo: false
 google_analytics:
 theme: jekyll-theme-hacker
+github:
+  is_project_page: false
