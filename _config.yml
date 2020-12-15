@@ -1,5 +1,6 @@
-title: Hacker theme
-description: Hacker is a theme for GitHub Pages.
-show_downloads: true
+title: Alion's Blog
+description: Beep, Beep!
+show_downloads: false
+show_repo: false
 google_analytics:
 theme: jekyll-theme-hacker
