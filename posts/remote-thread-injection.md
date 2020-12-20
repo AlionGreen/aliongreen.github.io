@@ -79,11 +79,7 @@ the following picture shows how standard windows APIs, Native APIs and direct sy
                                   |                              |                                  
                                   +------------------------------+                                  
 ```
-<!-- all of these procedures consists of these steps:
-1. Find Your target process
-2. Allocate a memory space into that process
-3. Write Your Shellcode into that space
-4. Create a Thread to Run Your shellcode -->
+
 now let's code.
 ## Standard Windows APIs
 ### pros:
@@ -147,10 +143,10 @@ i should mention that sysmon get's the event of thread creation and ... and all 
 that's it for this part. 
 
 ## Native API
-#### pros:
+### pros:
 - bypass some of the AV/EDRs
 
-#### cons:
+### cons:
 - hard to use
 - still detectable by most AV/EDRs
 - may not work on all windows versions
@@ -247,10 +243,10 @@ and now we have our reverse shell.
 let's go a little deeper and and implement it using syscalls
 
 ## Direct Syscalls
-#### pros:
+### pros:
 - undetectable by all of the API monitoring tools that work on user-space
 
-#### cons:
+### cons:
 - may not work on all windows versions
 - hard to use
 
