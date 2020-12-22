@@ -24,3 +24,6 @@ _References_
 **Twitter:** [https://twitter.com/AlionGreen](https://twitter.com/AlionGreen/)
 
 <br clear="left"/>
+
+# Posts
+- **Dec 22, 2020** [Process Injection: Remote Thread Injection or CreateRemoteThread](./posts/remote-thread-injection.html)
