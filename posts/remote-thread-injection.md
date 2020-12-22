@@ -4,7 +4,7 @@ layout: default
 
 # Process Injection: Remote Thread Injection or CreateRemoteThread
 
-In Every Red Team Operation, the goal of the Team is to Stay Stealthy and hide campaign operation from the blue team. From getting the initial access to hiding the C2 connections and extra filtering data, they use various techniques and procedures to do that. The first step of every campaign is to get initial access. They use customized malware and payloads to circumvent and evade defending tools such as AVs and EDRs. 
+In Every Red Team Operation, the goal of the Team is to Stay Stealthy and hide campaign operation from the blue team. From getting the initial access to hiding the C2 connections and exfiltrating data, they use various techniques and procedures to do that. The first step of every campaign is to get initial access. They use customized malware and payloads to circumvent and evade defending tools such as AVs and EDRs. 
 
 [Process Injection](https://attack.mitre.org/techniques/T1055/) is one of the techniques that is used to evade the defense mechanism. Remote Thread Injection (aka CreateRemoteThread) is one of the simple and reliable sub technique. it works by injecting the shellcode (payload) into the context of another eligible process and creates a thread for that process to run the payload.
 
