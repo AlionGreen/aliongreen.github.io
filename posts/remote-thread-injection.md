@@ -47,7 +47,7 @@ the following picture shows how standard windows APIs, Native APIs and direct sy
                       |                           |                               |                 
                       |                           |                               |                 
                       |                           |                               |                 
-                      |                           | Standarad Windows API         |                 
+                      |                           |  Standard Windows API         |                 
                       |                           |                               |                 
                       |                           |                               |                 
                       |                           v                               |                 
