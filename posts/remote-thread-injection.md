@@ -263,6 +263,9 @@ afterward using the functions is like Native APIs but here we don’t need to lo
 
 You can find the codes for this post on my [Github](https://github.com/AlionGreen/remote-thread-injection).
 
+# Credit:
+thanks, [@0x00dtm](https://twitter.com/0x00dtm) for guiding me through Native APIs and Syscalls. it would be much harder without his help.
+
 ## References:
 [https://outflank.nl/blog/2019/06/19/red-team-tactics-combining-direct-system-calls-and-srdi-to-bypass-av-edr/](https://outflank.nl/blog/2019/06/19/red-team-tactics-combining-direct-system-calls-and-srdi-to-bypass-av-edr/)
 
