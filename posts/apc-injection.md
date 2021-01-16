@@ -60,7 +60,7 @@ These are the steps to implement simple APC injection:
 
 2- Allocate space in the target process for your shellcode
 
-3- Write your shellcode in allocated space.
+3- Write your shellcode in the allocated space.
 
 4- Find target process threads
 
@@ -134,7 +134,7 @@ ResumeThread(pi.hThread);
 
 Special User APC is a new system call that has been added since the RS5 release of windows and could be achieved by using the **NtQueueApcThreadEx** function. normally, a thread can only run APCs when it enters an alertable state. but using Special User APC we can force a thread to run APC without entering an alertable state. but remember using special user APC could be dangerous in some cases and lead the thread to deadlock. read [repnz](https://repnz.github.io/posts/apc/user-apc/) post for more information.
 
-We implement Special User APC using syscalls. We use [SysWhisper](https://github.com/jthuraisamy/SysWhispers) to generate syscalls and their definition. then we add the **header** and **asm** files that **SysWhisper** already generate to our project. you should also enable **MASM** in the visual studio for your project.
+We implement Special User APC using syscalls. We use [SysWhisper](https://github.com/jthuraisamy/SysWhispers) to generate syscalls and their definition. then we add the **header** and **asm** files to our project. you should also enable **MASM** in the visual studio for your project.
 ```bash
 python syswhispers.py -f NtQueueApcThreadEx,NtOpenProcess,NtAllocateVirtualMemory,NtWriteVirtualMemory,NtOpenThread --version 10 -o syscalls
 ```
