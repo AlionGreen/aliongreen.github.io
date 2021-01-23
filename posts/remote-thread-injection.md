@@ -255,7 +255,7 @@ In the previous steps, any API monitoring application and EDRs could detect our 
 One of the disadvantages of using syscalls is that their work is dependent on the version of OS and our code may not work on different windows versions. However, by using a great tool like [SysWhisper](https://github.com/jthuraisamy/SysWhispers) we can generate syscalls for different windows versions. you can run the following command to generate syscalls for our desired functions for windows 10.
 
 ```bash
-syswhispers.py --function NtCreateProcess,NtAllocateVirtualMemory,NtWriteVirtualMemory,NtCreateThreadEx -o syscall --versions 10
+syswhispers.py --function NtOpenProcess,NtAllocateVirtualMemory,NtWriteVirtualMemory,NtCreateThreadEx -o syscall --versions 10
 ```
 this command generates two output files **syscall.asm** and **syscall.h** that we  add to our visual studio project. then we should enable [MASM](https://docs.microsoft.com/en-us/cpp/assembler/masm/masm-for-x64-ml64-exe?view=msvc-160) in the project and include the header file in our main code.
 
