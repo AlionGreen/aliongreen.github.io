@@ -5,7 +5,7 @@ layout: default
 # Bio
 
 <img style="padding-right: 30px;" align="left" src="assets/images/samurai.png">
-**Who am I:** Ali Sabzeghabaei
+**Who am I:** Leo Sabzeghabaei
 
 **Known as:** Alion
 
