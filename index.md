@@ -11,7 +11,7 @@ layout: default
 
 **What do I do:** Penetration Testing
 
-**Where am I:** United Kingdom
+**Where am I:** The Netherlands
 
 **HackTheBox:** [alion](https://www.hackthebox.eu/profile/102724)
 
@@ -26,7 +26,7 @@ _References_
 <br clear="left"/>
 
 # Posts
-<!--
+
 - **Jan 17, 2021** [Process Injection: APC Injection](./posts/apc-injection)
 - **Dec 22, 2020** [Process Injection: Remote Thread Injection or CreateRemoteThread](./posts/remote-thread-injection)
--->
+
